@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
-import detectEthereumProvider from '@metamask/detect-provider';
 import abi from './../lib/abi/Airdrop.js';
 import { merkleProof } from './../lib/scripts/merkleTree';
 import useTokenBalance from '../hooks/useTokenBalance.js';
+import verifyEligibility from '../utils/verifyEligibility';
+import connectWallet from '../utils/connectWallet';
 
 export default function AirdropPage() {
   const [provider, setProvider] = useState(null);
@@ -28,38 +29,6 @@ export default function AirdropPage() {
     { address: '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC', amount: ethers.parseEther('150') },
     { address: process.env.NEXT_PUBLIC_ADDRESS_METAMASK_TESTING, amount: ethers.parseEther('100') },
   ];
-
-  const connectWallet = async () => {
-    try {
-      const provider = await detectEthereumProvider();
-      if (provider) {
-        setProvider(provider);
-        const accounts = await provider.request({ method: 'eth_requestAccounts' });
-        setAccount(accounts[0]);
-        provider.on('accountsChanged', (accounts) => setAccount(accounts[0]));
-      } else {
-        alert('MetaMask no está instalada. Por favor instala MetaMask.');
-      }
-    } catch (error) {
-      console.error('Error conectando a MetaMask:', error);
-    }
-  };
-
-  const verifyEligibility = async () => {
-    if (!account) return;
-
-    const user = eligibleUsers.find(user => user.address.toLowerCase() === account.toLowerCase());
-
-    if (user) {
-      setIsEligible(true);
-      setTotalAssigned(ethers.formatEther(user.amount));
-      updateStatusMessage('Eres elegible para el airdrop.', 'success');
-    } else {
-      setIsEligible(false);
-      setTotalAssigned(0);
-      updateStatusMessage('No eres elegible para el airdrop.', 'error');
-    }
-  };
 
   const claimTokens = async () => {
     if (!provider || !account || !isEligible || claimedAmount === '' || claimedAmount <= 0) return;
@@ -96,7 +65,7 @@ export default function AirdropPage() {
 
   useEffect(() => {
     if (account) {
-      verifyEligibility();
+      verifyEligibility(account, eligibleUsers, setIsEligible, setTotalAssigned, updateStatusMessage);
     }
   }, [account]);
 
@@ -109,7 +78,7 @@ export default function AirdropPage() {
       <div className="mb-8 p-6 bg-gray-800 rounded-lg shadow-lg w-full max-w-lg text-center">
         {!account ? (
           <button
-            onClick={connectWallet}
+            onClick={connectWallet(setProvider, setAccount)}
             className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition duration-300"
           >
             Conectar MetaMask
