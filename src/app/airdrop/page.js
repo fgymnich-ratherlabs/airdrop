@@ -5,6 +5,7 @@ import { ethers } from 'ethers';
 import detectEthereumProvider from '@metamask/detect-provider';
 import abi from './../lib/abi/Airdrop.js';
 import { merkleProof } from './../lib/scripts/merkleTree';
+import useTokenBalance from '../hooks/useTokenBalance.js';
 
 export default function AirdropPage() {
   const [provider, setProvider] = useState(null);
@@ -17,7 +18,7 @@ export default function AirdropPage() {
   const [totalAssigned, setTotalAssigned] = useState(0);
   const [redeemedTokens, setRedeemedTokens] = useState(0);
   const [isMetaMaskBusy, setIsMetaMaskBusy] = useState(false); 
-
+  const balance = useTokenBalance(account, claimedAmount);
 
   const AirdropContractAddress = process.env.NEXT_PUBLIC_AIRDROP_CONTRACT_ADDRESS_LOCAL;
   const AirdropABI = abi;
@@ -74,8 +75,13 @@ export default function AirdropPage() {
       const tx = await airdropContract.airdrop(witnesses, ethers.parseEther(totalAssigned), ethers.parseEther(claimedAmount), path);
       await tx.wait();
 
+      const newRedeemedTokens = redeemedTokens + parseFloat(claimedAmount);
+
+      // Actualiza el estado y localStorage con el nuevo valor
+      setRedeemedTokens(newRedeemedTokens);
+      localStorage.setItem(`redeemedTokens_${account}`, newRedeemedTokens);
+
       updateStatusMessage(`Has reclamado ${claimedAmount} tokens exitosamente.`, 'success');
-      setRedeemedTokens(redeemedTokens + parseFloat(claimedAmount));
       setClaimedAmount('');
     } catch (error) {
       console.error('Error al reclamar los tokens:', error);
@@ -96,7 +102,14 @@ export default function AirdropPage() {
   };
 
   useEffect(() => {
-    if (account) verifyEligibility();
+    if (account) {
+      verifyEligibility();
+      // Obtener los tokens reclamados desde localStorage al cargar la página
+      const storedRedeemedTokens = localStorage.getItem(`redeemedTokens_${account}`);
+      if (storedRedeemedTokens) {
+        setRedeemedTokens(parseFloat(storedRedeemedTokens));
+      }
+    }
   }, [account]);
 
   return (
@@ -127,7 +140,7 @@ export default function AirdropPage() {
         )}
       </div>
 
-      {isEligible && (
+      {isEligible && account && (
         <div className="flex flex-col items-center mt-6 p-6 bg-gray-800 rounded-lg shadow-2xl w-full max-w-xl">
           <div className="mb-4">
             <p className="text-2xl text-transparent font-[family-name:var(--font-geist-mono)] bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500 font-bold shadow-md">
