@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
-import detectEthereumProvider from '@metamask/detect-provider';
 import abi from './../lib/abi/Airdrop.js';
 import { merkleProof } from './../lib/scripts/merkleTree';
+import useTokenBalance from '../hooks/useTokenBalance.js';
+import verifyEligibility from '../utils/verifyEligibility';
+import connectWallet from '../utils/connectWallet';
 
 export default function AirdropPage() {
   const [provider, setProvider] = useState(null);
@@ -15,9 +17,8 @@ export default function AirdropPage() {
   const [statusColor, setStatusColor] = useState('text-white');
   const [showGlow, setShowGlow] = useState(false);
   const [totalAssigned, setTotalAssigned] = useState(0);
-  const [redeemedTokens, setRedeemedTokens] = useState(0);
   const [isMetaMaskBusy, setIsMetaMaskBusy] = useState(false); 
-
+  const balance = useTokenBalance(account, statusMessage); //hook que trae el balance del address del token, cuando se conecta la mm o se realiza una tx
 
   const AirdropContractAddress = process.env.NEXT_PUBLIC_AIRDROP_CONTRACT_ADDRESS_LOCAL;
   const AirdropABI = abi;
@@ -28,38 +29,6 @@ export default function AirdropPage() {
     { address: '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC', amount: ethers.parseEther('150') },
     { address: process.env.NEXT_PUBLIC_ADDRESS_METAMASK_TESTING, amount: ethers.parseEther('100') },
   ];
-
-  const connectWallet = async () => {
-    try {
-      const provider = await detectEthereumProvider();
-      if (provider) {
-        setProvider(provider);
-        const accounts = await provider.request({ method: 'eth_requestAccounts' });
-        setAccount(accounts[0]);
-        provider.on('accountsChanged', (accounts) => setAccount(accounts[0]));
-      } else {
-        alert('MetaMask no está instalada. Por favor instala MetaMask.');
-      }
-    } catch (error) {
-      console.error('Error conectando a MetaMask:', error);
-    }
-  };
-
-  const verifyEligibility = async () => {
-    if (!account) return;
-
-    const user = eligibleUsers.find(user => user.address.toLowerCase() === account.toLowerCase());
-
-    if (user) {
-      setIsEligible(true);
-      setTotalAssigned(ethers.formatEther(user.amount));
-      updateStatusMessage('Eres elegible para el airdrop.', 'success');
-    } else {
-      setIsEligible(false);
-      setTotalAssigned(0);
-      updateStatusMessage('No eres elegible para el airdrop.', 'error');
-    }
-  };
 
   const claimTokens = async () => {
     if (!provider || !account || !isEligible || claimedAmount === '' || claimedAmount <= 0) return;
@@ -75,7 +44,6 @@ export default function AirdropPage() {
       await tx.wait();
 
       updateStatusMessage(`Has reclamado ${claimedAmount} tokens exitosamente.`, 'success');
-      setRedeemedTokens(redeemedTokens + parseFloat(claimedAmount));
       setClaimedAmount('');
     } catch (error) {
       console.error('Error al reclamar los tokens:', error);
@@ -96,7 +64,9 @@ export default function AirdropPage() {
   };
 
   useEffect(() => {
-    if (account) verifyEligibility();
+    if (account) {
+      verifyEligibility(account, eligibleUsers, setIsEligible, setTotalAssigned, updateStatusMessage);
+    }
   }, [account]);
 
   return (
@@ -108,7 +78,7 @@ export default function AirdropPage() {
       <div className="mb-8 p-6 bg-gray-800 rounded-lg shadow-lg w-full max-w-lg text-center">
         {!account ? (
           <button
-            onClick={connectWallet}
+            onClick={connectWallet(setProvider, setAccount)}
             className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition duration-300"
           >
             Conectar MetaMask
@@ -127,11 +97,11 @@ export default function AirdropPage() {
         )}
       </div>
 
-      {isEligible && (
+      {isEligible && account && (
         <div className="flex flex-col items-center mt-6 p-6 bg-gray-800 rounded-lg shadow-2xl w-full max-w-xl">
           <div className="mb-4">
             <p className="text-2xl text-transparent font-[family-name:var(--font-geist-mono)] bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500 font-bold shadow-md">
-              Tokens Asignados:
+              Tokens MTK Asignados:
               <span className="ml-2 px-2 py-1 bg-yellow-500 rounded-lg shadow-lg text-black">
                 {totalAssigned}
               </span>
@@ -139,9 +109,9 @@ export default function AirdropPage() {
           </div>
           <div className="mb-4">
             <p className="text-2xl text-transparent font-[family-name:var(--font-geist-mono)] bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500 font-bold shadow-md">
-              Tokens Reclamados:
+              Tokens MTK Reclamados:
               <span className="ml-2 px-2 py-1 bg-yellow-500 rounded-lg shadow-lg text-black">
-                {redeemedTokens}
+                {balance/10**18}
               </span>
             </p>
           </div>
@@ -154,13 +124,15 @@ export default function AirdropPage() {
               onChange={(e) => setClaimedAmount(e.target.value)}
               className="mb-4 w-full px-4 py-2 bg-gray-700 text-white border font-[family-name:var(--font-geist-mono)] border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="0.0"
+              min="0.0"
             />
+           
           </div>
 
           <button
             onClick={claimTokens}
-            className={ `px-8 py-3 bg-green-500 enabled:hover:bg-green-600 text-white font-bold rounded-lg shadow-lg transition duration-300 dsiabled:bg-slate `}
-            disabled={isMetaMaskBusy}
+            className={ `px-8 py-3 bg-green-500 enabled:hover:bg-green-600 text-white font-bold rounded-lg shadow-lg transition duration-300 disabled:bg-gray-400 `}
+            disabled={isMetaMaskBusy || (claimedAmount<=0)}
           >
             {isMetaMaskBusy ? 'Procesando...' : 'Reclamar Tokens'}
           </button>
