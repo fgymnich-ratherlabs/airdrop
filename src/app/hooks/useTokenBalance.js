@@ -23,7 +23,7 @@ const useTokenBalance = (account, balanceUpdated) => {
         };
 
         fetchBalance();
-        
+
     }, [account, balanceUpdated]);
 
     return balance;
