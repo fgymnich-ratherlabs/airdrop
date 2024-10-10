@@ -41,8 +41,8 @@ export default function AdminPage() {
       const signer = await ethersProvider.getSigner();
       const airdropContract = new ethers.Contract(AirdropContractAddress, AirdropABI, signer);
 
-      const totalAssigned = await airdropContract.getAirdropTokenBalance();
-      setTotalClaimedTokens(ethers.formatEther(totalAssigned));
+      const totalRemaining = await airdropContract.getAirdropTokenBalance();
+      setTotalClaimedTokens(process.env.NEXT_PUBLIC_TOTAL_AMOUNT_TOKENS-ethers.formatEther(totalRemaining));
     } catch (error) {
       console.error('Error fetching total claimed tokens:', error);
     }
@@ -50,13 +50,31 @@ export default function AdminPage() {
 
   // Fetch recent claimers
   const fetchRecentClaimers = async () => {
-    // Simulated data, in a real case, this would come from events or contract calls.
-    const claimers = [
-      { address: '0xf39Fd6...', amount: ethers.parseEther('100') },
-      { address: '0x709979...', amount: ethers.parseEther('50') },
-    ];
-    setRecentClaimers(claimers);
+    if (!provider || !account) return;
+
+    try {
+      const ethersProvider = new ethers.BrowserProvider(provider);
+      const signer = await ethersProvider.getSigner();
+      const airdropContract = new ethers.Contract(AirdropContractAddress, AirdropABI, signer);
+
+      // Query past events for the TokensAirdropped event
+      const filter = airdropContract.filters.TokensAirdropped(null, null);
+      const recentEvents = await airdropContract.queryFilter(filter); // Adjust range as needed
+
+      // Extract address and amount from the events
+      const claimers = recentEvents.map((event) => {
+        return {
+          address: event.args.account, // The claimer's address
+          amount: event.args.amount, // The amount claimed
+        };
+      });
+
+      setRecentClaimers(claimers);
+    } catch (error) {
+      console.error('Error fetching recent claimers:', error);
+    }
   };
+
 
   const fetchPaused = async () =>{
     if (!provider || !account) return;
@@ -153,7 +171,7 @@ export default function AdminPage() {
             <p className="text-2xl text-transparent font-[family-name:var(--font-geist-mono)] bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500 font-bold shadow-md">
               Total Tokens Reclamados:
               <span className="ml-2 px-2 py-1 bg-yellow-500 rounded-lg shadow-lg text-black">
-                {totalClaimedTokens}
+                {totalClaimedTokens} / {process.env.NEXT_PUBLIC_TOTAL_AMOUNT_TOKENS}
               </span>
             </p>
           </div>

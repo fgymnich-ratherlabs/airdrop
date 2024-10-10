@@ -15,7 +15,7 @@ const merkleRoot = (items) => {
 const merkleProof = (items, item) => {
   console.log("items: " , items);
   console.log("item: ",item);
-  let index = items.findIndex((i) => i.address === item.address && i.amount === item.amount);
+  let index = items.findIndex((i) => i.address.toLowerCase() === item.address.toLowerCase() && i.amount === item.amount);
   if (index === -1) throw new Error('Item not found in items: ' + item);
 
   let path = [];
