@@ -134,9 +134,9 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (account) {
+      checkIfOwner();
       fetchTotalClaimed();
       fetchRecentClaimers();
-      checkIfOwner();
       fetchPaused();
     }
   }, [account]);
