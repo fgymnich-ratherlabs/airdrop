@@ -12,7 +12,7 @@ const useTokenBalance = (account, balanceUpdated) => {
         const fetchBalance = async () => {
             try {
                 const provider = new ethers.BrowserProvider(window.ethereum)
-                const tokenContract = new ethers.Contract(process.env.NEXT_PUBLIC_TOKEN_CONTRACT_ADDRESS_LOCAL, abi, provider);
+                const tokenContract = new ethers.Contract(process.env.NEXT_PUBLIC_TOKEN_CONTRACT_ADDRESS_HOLESKY_V2, abi, provider);
                 console.log('Fetching balance for account:', account, tokenContract);
                 const balance = await tokenContract.balanceOf(account);
                 console.log('Balance:', balance.toString());
