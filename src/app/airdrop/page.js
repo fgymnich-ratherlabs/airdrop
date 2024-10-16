@@ -53,6 +53,7 @@ export default function AirdropPage() {
     amount: ethers.parseEther(tokensPerUser.toString())
   }));
 
+  //calls airdrop function of smart contract
   const claimTokens = async () => {
     if (!provider || !account || !isEligible || claimedAmount === '' || claimedAmount <= 0) return;
 
