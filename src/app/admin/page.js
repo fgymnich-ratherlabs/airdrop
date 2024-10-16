@@ -13,7 +13,7 @@ export default function AdminPage() {
   const [contractPaused, setContractPaused] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
 
-  const AirdropContractAddress = process.env.NEXT_PUBLIC_AIRDROP_CONTRACT_ADDRESS_LOCAL;
+  const AirdropContractAddress = process.env.NEXT_PUBLIC_AIRDROP_CONTRACT_ADDRESS_HOLESKY_V2;
   const AirdropABI = abi;
 
   // Fetch owner address and compare with connected account
