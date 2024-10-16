@@ -20,7 +20,7 @@ export default function AirdropPage() {
   const [isMetaMaskBusy, setIsMetaMaskBusy] = useState(false); 
   const balance = useTokenBalance(account, statusMessage); //hook que trae el balance del address del token, cuando se conecta la mm o se realiza una tx
 
-  const AirdropContractAddress = process.env.NEXT_PUBLIC_AIRDROP_CONTRACT_ADDRESS_LOCAL;
+  const AirdropContractAddress = process.env.NEXT_PUBLIC_AIRDROP_CONTRACT_ADDRESS_HOLESKY_V2;
   const AirdropABI = abi;
 
   const addresses = [
@@ -62,8 +62,8 @@ export default function AirdropPage() {
       const signer = await ethersProvider.getSigner();
       const airdropContract = new ethers.Contract(AirdropContractAddress, AirdropABI, signer);
 
-      const { witnesses, path } = merkleProof(eligibleUsers, { address: account, amount: ethers.parseEther(totalAssigned) });
-      const tx = await airdropContract.airdrop(witnesses, ethers.parseEther(totalAssigned), ethers.parseEther(claimedAmount), path);
+      const { witnesses } = merkleProof(eligibleUsers, { address: account, amount: ethers.parseEther(totalAssigned) });
+      const tx = await airdropContract.airdrop(witnesses, ethers.parseEther(totalAssigned), ethers.parseEther(claimedAmount));
       await tx.wait();
 
       updateStatusMessage(`Has reclamado ${claimedAmount} tokens exitosamente.`, 'success');
